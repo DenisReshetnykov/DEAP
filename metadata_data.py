@@ -10,7 +10,8 @@ class ParticipantRatings:
         self.df = pd.read_csv(self.__filename)
         if nParticipant is not None:
             self.nParticipant = nParticipant
-            self.df = self.df.where(self.df['Participant_id'] == self.nParticipant).dropna(how='all')
+            # self.df = self.df.where(self.df['Participant_id'] == self.nParticipant).dropna(how='all')
+            self.df = self.df[self.df['Participant_id'] == self.nParticipant]
 
     def getArousal(self):
         self.arousal = self.df['Arousal']
