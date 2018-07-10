@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from participant_data import ParticipantData
 from deapdata import EEG_CHANELS, PHYS_DATA_CHANELS, FREQ
@@ -17,6 +18,7 @@ class ParticipantSignalsFeatures(ParticipantData):
         self.spectralEEGFeatures = {}  # {1: {1: {'theta': 297233, 'alpha': 151385}}}
         self.spectralEEGAsymetry = {}  # {1: {1: {'theta': -2431634, 'alpha': -729425}}}
         self.averageSkinResistance = {}  # {1: -1297, 2: 817, ... , 40: 19011}
+        self.averageOfDerivative = {}
 
     def computeFeatures(self, trials, electrodes, bands, freq, epochStart, epochStop, electrodePairs, asymBands):
         for trial in trials:
@@ -74,17 +76,32 @@ class ParticipantSignalsFeatures(ParticipantData):
             band in bands.keys()}
         return self.spectralEEGAsymetry[trial][leftElectrode]
 
+    def clearTrendFromSignal(self, signal):
+        #  TODO написать функцию вычисления тренда в сигнале и очистки сигнала от него
+        return signal
+
     def calculateAverageSkinResistance(self, trial, recount=False):
         if trial not in self.averageSkinResistance or recount:
             signal = self.data[trial-1, 36]
             self.averageSkinResistance[trial] = int(np.mean(signal))
         return self.averageSkinResistance[trial]
 
+    def calculateAverageOfDerivative(self, trial, recount=False):
+        if trial not in self.averageOfDerivative or recount:
+            signal = self.data[trial-1, 36]
+            plt.figure(figsize=(15, 8))
+            plt.plot(signal)
+            plt.show()
+            # print(signal)
+        return averageOfDerivative
+
+
 
 
 
 if __name__ == "__main__":
     p = ParticipantSignalsFeatures(3)
+    p.calculateAverageOfDerivative(3)
     # p.computeFeatures(range(1, 41), range(1, 33), BANDS, FREQ, 0, 8063, ASYM_ELECTRODE_PAIRS, ASYM_BANDS)
     # for trial in range(1, 41):
     #     p.calculateAverageSkinResistance(trial)

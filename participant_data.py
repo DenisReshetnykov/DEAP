@@ -35,10 +35,11 @@ class ParticipantData:
         if list(self.familiarity):
             return list(self.familiarity)
         else:
-            print('No Familiarity data')
+            print('No Familiarity data for participant {}'.format(self.nParticipant))
             return None
 
 
 if __name__ == "__main__":
-    p = ParticipantData(3)
+    for n in range(1,33):
+        p = ParticipantData(n).getFamiliarity()
     # print(p.data[1, 3].shape)

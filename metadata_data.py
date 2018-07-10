@@ -1,5 +1,4 @@
 import pandas as pd
-import time
 import numpy as np
 
 
@@ -129,6 +128,10 @@ class AVSpaceDividedCollections:
 
 
 if __name__ == "__main__":
-    pass
+    p = ParticipantRatings(2)
+    if p.getFamiliarity() != []:
+        print(p.familiarity)
+    # print(p.familiarity.reset_index(drop=True).iloc[0])
+
 
 

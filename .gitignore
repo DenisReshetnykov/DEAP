@@ -1,4 +1,8 @@
-/metadata_csv
-/data_preprocessed_python
 /data_preprocessed_matlab
+/data_preprocessed_python
+/feature_vectors
+/metadata_csv
+/training_data
 functional_scheme.txt
+tree.dot
+tree.pdf

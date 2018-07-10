@@ -1,19 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from scipy.stats import skew
+
 from metadata_data import ParticipantRatings, AVSpaceDividedCollections
+from features import ParticipantFeatureVectors, createHugeFeatureVector, saveHugeFeatureVector, Features
 
 RATINGS = ['Liking', 'Valence', 'Arousal', 'Dominance', 'Familiarity']
 SPACES = ['LALV', 'HALV', 'LAHV', 'HAHV']
 
-#######################################################################################################################\
-#  plot valence, arousal, dominance, liking
-# def plotSubjectiveRatings():
-#     def loadSubjectiveData()
-#     def calculateRatingMinMax()
-#     def calculateRatingMean():
-#     def calculateClassSeparation()
-#     def plotRatings()
-# Необходимо загрузить субъективные рейтинги по каждому trial, посчитать средние значения и вывести на едином графике
+
 def getExpIDData(expList=range(1, 41)):
     '''
     Return participant data for list of experiment(video)
@@ -66,7 +62,7 @@ def plotRatings(expIDRatingsMinMaxMean):
     plt.ylabel('Valence')
     plt.show()
 
-#######################################################################################################################
+
 #  Rating distributions for the emotion induction conditions
 #  Fig. 7. The distribution of the participants’ subjective ratings per scale (L - liking, V - valence, A - arousal, D -
 #  dominance, F - familiarity) for the 4 affect elicitation conditions (LALV, HALV, LAHV, HAHV)
@@ -83,7 +79,7 @@ def boxPlotSubjectiveRating():
         data.append(ratingdata)
     plt.figure(figsize=(15,8))
     for n in range(4):
-        plt.subplot(1,4,n+1)
+        plt.subplot(1, 4, n+1)
         plt.boxplot(data[n], notch=True, sym='.', labels=[Letter[0] for Letter in RATINGS])
         x1, x2, y1, y2 = plt.axis()
         plt.axis((x1, x2, 0, 10))
@@ -92,9 +88,65 @@ def boxPlotSubjectiveRating():
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
-#######################################################################################################################
+
+def basicalDataAnalysis(nParticipant):
+    p = ParticipantFeatureVectors(nParticipant, from_file=True)
+    print('There DF with shape {}.\nThere some stats for features:\n'.format(str(p.featureDF.shape)))
+    print('Feature'+' '*20+'min'+' '*10+'max'+' '*8+'mean'+' '*8+'median'+' '*8+'std'+' '*7+'skew')
+
+    for feature in list(p.featureDF.columns):
+        FDF = p.featureDF[feature]
+        print('{0}{1}{2}{3}{4}{5}{6}'.format('{:18}'.format(feature), '{:13}'.format(np.min(FDF)),
+                                             '{:13}'.format(np.max(FDF)), '{:13}'.format(round(np.mean(FDF))),
+                                             '{:13}'.format(round(np.median(FDF))), '{:13}'.format(round(np.std(FDF))),
+                                             '{:9}'.format(round(skew(FDF), 3))))
+    f = 1
+    plt.figure(figsize=(15, 15))
+    for feature in list(p.featureDF.columns)[0:36]:
+        plt.subplot(6, 6, f)
+        plt.boxplot(p.featureDF[feature], notch=True, sym='.')
+        plt.title(feature)
+        f += 1
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+    #  TODO визуализация (ящик с усами)
+
+    #  TODO нарисовать гистограммы по каждой фиче
+
+    #  TODO визуализация написать метод строящий корелляцию межды признаками в датафрейме
+
+
+def plottingData(signal, y):
+    plt.figure(figsize=(15, 15))
+    plt.scatter(signal, y)
+    plt.show()
+
+def plotScaterMatrix():
+    X = Features(pd.DataFrame.from_csv('feature_vectors/huge/FV_familiarity.csv'))
+    X.normalizeData()
+
+    # positive = X.normDF['Fp1_theta'].where(X.normDF['Fp1_theta'] > 0).dropna()
+    # negative = X.normDF['Fp1_theta'].where(X.normDF['Fp1_theta'] < 0).dropna()
+    # print(negative)
+
+
+    y = pd.DataFrame.from_csv('feature_vectors/huge/YV_familiarity.csv').astype(int)
+
+    grr = pd.plotting.scatter_matrix(X.normDF.iloc[:, 210:], c=y['0'].tolist(), figsize=(15, 15), marker='.',
+                            hist_kwds={'bins': 20}, alpha=.8)
+
+    # plt.scatter(negative, negative.index.values)
+
+
+    plt.show()
+
+
 
 
 if __name__ == "__main__":
-    boxPlotSubjectiveRating()
+    plotScaterMatrix()
+
+
+    # basicalDataAnalysis(2)
     # print(plotRatings(calculateRatingMinMaxMean(getExpIDData())))
