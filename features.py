@@ -250,6 +250,9 @@ class Features:
     def __init__(self, dataframe):
         self.dataframe = dataframe
         self.normDF = pd.DataFrame
+        self.StandardScaler = pd.DataFrame
+        self.RobustScaler = pd.DataFrame
+        self.MinMaxScaler = pd.DataFrame
         self.normCoef = {}
         self.features = self.dataframe.columns
         self.statistics = {}
