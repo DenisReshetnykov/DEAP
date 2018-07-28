@@ -141,8 +141,60 @@ def plotScaterMatrix():
 
     plt.show()
 
+def plot3D():
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter([xs for xs in range(8, 9) for ys in range(40, 70)], [ys for xs in range(8, 9) for ys in range(40, 70)],
+               [useModel(ensembleRandomForestClassifier, X, y, n, m) for n in range(8, 9) for m in range(40, 70)])
+    plt.show()
 
+def plotHistForPCA(X, y):
+    Xy = pd.concat([X, y], axis=1)
+    zero = Xy[Xy['0'] == 0]
+    print('Zero shape {}'.format(zero.shape))
+    one = Xy[Xy['0'] == 1]
+    print('One shape {}'.format(one.shape))
 
+    for n in range(8):
+        plt.figure(n)
+        fig, axes = plt.subplots(4, 5, figsize=(15, 15))
+        ax = axes.ravel()
+        for i in range(20):
+            _, bins = np.histogram(Xy.iloc[:, n*20+i], bins=50)
+            ax[i].hist(zero.iloc[:, n*20+i], bins=bins, color='red', alpha=.5)
+            ax[i].hist(one.iloc[:, n*20+i], bins=bins, color='blue', alpha=.5)
+            ax[i].set_title(Xy.columns[n*20+i])
+            ax[i].set_yticks(())
+        ax[0].set_xlabel("Значение признака")
+        ax[0].set_ylabel("Частота")
+        ax[0].legend(["0", "1"], loc="best")
+        fig.tight_layout()
+        plt.show()
+
+    for n in range(2):
+        plt.figure(n+8)
+        fig, axes = plt.subplots(7, 4, figsize=(15, 15))
+        ax = axes.ravel()
+        for i in range(28):
+            _, bins = np.histogram(Xy.iloc[:, 160+n*28+i], bins=50)
+            ax[i].hist(zero.iloc[:, 160+n*28+i], bins=bins, color='red', alpha=.5)
+            ax[i].hist(one.iloc[:, 160+n*28+i], bins=bins, color='blue', alpha=.5)
+            ax[i].set_title(Xy.columns[160+n*28+i])
+            ax[i].set_yticks(())
+        ax[0].set_xlabel("Значение признака")
+        ax[0].set_ylabel("Частота")
+        ax[0].legend(["0", "1"], loc="best")
+        fig.tight_layout()
+    plt.show()
+
+def plotPCA(X_pca, y):
+    plt.figure(figsize=(8, 8))
+    plt.scatter(X_pca[:, 0], X_pca[:, 1], c=y)
+    plt.legend(["0", "1"], loc="best")
+    plt.gca().set_aspect("equal")
+    plt.xlabel("Первая главная компонента")
+    plt.ylabel("Вторая главная компонента")
+    plt.show()
 
 if __name__ == "__main__":
     plotScaterMatrix()

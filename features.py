@@ -1,10 +1,12 @@
-from deapdata import EEG_CHANELS, PHYS_DATA_CHANELS, FREQ, STATISTICS
+from deapdata import EEG_CHANELS, PHYS_DATA_CHANELS, FREQ, STATISTICS, BANDS, ASYM_BANDS, ASYM_ELECTRODE_PAIRS
 from metadata_data import ParticipantRatings
-from phys_data import ParticipantSignalsFeatures, BANDS, ASYM_BANDS, ASYM_ELECTRODE_PAIRS
+from phys_data import ParticipantSignalsFeatures, ClearedEEGParticipantFeatures
 from eventlogger import EventLogger
 
 from datetime import datetime
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
 import os
 import pandas as pd
 import random
@@ -218,33 +220,6 @@ def createHugeFeatureVector(seed, from_file=False):
                 print('Y_train for {} is empty'.format(part))
     return X_huge_train, Y_huge_train, X_huge_test, Y_huge_test
 
-def saveHugeFeatureVector(seed):
-    X_huge_train, Y_huge_train, X_huge_test, Y_huge_test = createHugeFeatureVector(seed)
-    np.save('feature_vectors/huge/' + str(seed) + 'X_train', X_huge_train)
-    np.save('feature_vectors/huge/' + str(seed) + 'Y_train', Y_huge_train)
-    np.save('feature_vectors/huge/' + str(seed) + 'X_test', X_huge_test)
-    np.save('feature_vectors/huge/' + str(seed) + 'Y_test', Y_huge_test)
-
-def convertCategorialFeatureTo01(series):
-    print('There such unique categorial values: {}'.format(sorted(series.unique())))
-    convert_dict = {entry: [0] * sorted(series.unique()).index(entry) + [1] + [0] * (
-                len(series.unique()) - 1 - sorted(series.unique()).index(entry)) for entry in series.unique()}
-    series = series.map(convert_dict)
-    return series
-
-def combineFV():
-    # features = []
-    for type in ['arousal', 'dominance', 'liking', 'valence']:
-        Ys = []
-        for part in range(1, 33):
-        # features.append(pd.DataFrame.from_csv('feature_vectors/FV'+str(part)+'.csv'))
-            Ys.append(pd.DataFrame.from_csv('feature_vectors/YV' + str(part) + type[0] + '.csv'))
-        result = pd.concat(Ys)
-        print(result)
-        filename = 'feature_vectors/huge/YV_' + type + '.csv'
-        result.to_csv(filename)
-    return result
-
 
 class Features:
     def __init__(self, dataframe):
@@ -295,23 +270,114 @@ class Features:
     def covarianceMatrix(self, features):
         pass # TODO визуализация матрицы ковариации
 
-
     #  TODO Класс делегирует методы визуализации в модуль plotting. Класс делегирует методы сериализации и
     #  TODO десереализации своих атрибутов в служебный класс ObjectSerialize.
 
 
+class ParticipantEEGFeatureVectors(ParticipantFeatureVectors):
+    def __init__(self, nParticipant, from_file = False):
+        self.nParticipant = nParticipant
+        self.events = EventLogger()
+        self.ratings = ParticipantRatings(self.nParticipant)
+        self.featureVectors = {}  #
+        self.featureDF = pd.DataFrame  # use special function
+        self.Y = {}
+        for trial in range(1, 41):
+            self.featureVectors[trial] = {}
+            self.Y[trial] = 0
+        #  seed and variables for splitting data
+        self.randomSeed = random.randint(1, 1000000)
+        self.X_train = {}
+        self.X_test = {}
+        self.X_validation = {}
+        self.Y_train = {}
+        self.Y_test = {}
+        self.Y_validation = {}
+        #  if we not use precomputed feature from file - compute it from raw signals
+        if not from_file:
+            self.featureVectors = self.unpackEEGDataToVectors()
+        else:
+            self.loadFeatureVectorsFromCSV()
+            self.convertFeatureVectorsToDataFrame()
+
+    def unpackEEGDataToVectors(self):
+        eegSpectral = ClearedEEGParticipantFeatures(self.nParticipant).computeEEGSpectralPower()
+        for trial in range(1, 41):
+            for electrode in range(len(EEG_CHANELS)):
+                for timeSegment in eegSpectral[trial][electrode+1].keys():
+                    for band in ASYM_BANDS.keys():
+                        feature_name = EEG_CHANELS[electrode] + '_' + band + '_' + str(timeSegment)
+                        self.featureVectors[trial][feature_name] = eegSpectral[trial][electrode+1][timeSegment][band]
+        return self.featureVectors
+
+    def saveFeatureVectorToCSV(self):
+        filename = 'feature_vectors/4/FV{}.csv'.format(str(self.nParticipant))
+        pd.DataFrame.from_dict(self.featureVectors, orient='index').to_csv(filename)
+
+    #  in most cases we no need to recalculate features from data, so it's necessary to load the previously computed
+    #  (and saved to *.csv) featureVectors
+    def loadFeatureVectorsFromCSV(self):
+        filename = 'feature_vectors/4/FV{}.csv'.format(str(self.nParticipant))
+        self.featureVectors = pd.DataFrame.from_csv(filename).to_dict(orient='index')
+
+
+def saveHugeFeatureVector(seed):
+    X_huge_train, Y_huge_train, X_huge_test, Y_huge_test = createHugeFeatureVector(seed)
+    np.save('feature_vectors/huge/' + str(seed) + 'X_train', X_huge_train)
+    np.save('feature_vectors/huge/' + str(seed) + 'Y_train', Y_huge_train)
+    np.save('feature_vectors/huge/' + str(seed) + 'X_test', X_huge_test)
+    np.save('feature_vectors/huge/' + str(seed) + 'Y_test', Y_huge_test)
+
+
+def convertCategorialFeatureTo01(series):
+    print('There such unique categorial values: {}'.format(sorted(series.unique())))
+    convert_dict = {entry: [0] * sorted(series.unique()).index(entry) + [1] + [0] * (
+            len(series.unique()) - 1 - sorted(series.unique()).index(entry)) for entry in series.unique()}
+    series = series.map(convert_dict)
+    return series
+
+
+def combineFV():
+    # features = []
+    for type in ['arousal', 'dominance', 'liking', 'valence']:
+        Ys = []
+        for part in range(1, 33):
+            # features.append(pd.DataFrame.from_csv('feature_vectors/FV'+str(part)+'.csv'))
+            Ys.append(pd.DataFrame.from_csv('feature_vectors/YV' + str(part) + type[0] + '.csv'))
+        result = pd.concat(Ys)
+        print(result)
+        filename = 'feature_vectors/huge/YV_' + type + '.csv'
+        result.to_csv(filename)
+    return result
+
+def alltogether():
+    df = []
+    for n in range(1, 33):
+        if n not in [2, 15, 23]:
+            df.append(pd.DataFrame.from_csv('feature_vectors/4/FV{}.csv'.format(str(n))))
+    result = pd.concat(df)
+    result.to_csv('feature_vectors/4/FV_all_f.csv')
+
+
 if __name__ == "__main__":
     pass
-    # combineFV()
-    # y = pd.DataFrame.from_csv('feature_vectors/huge/YV_familiarity.csv').astype(int)
+    # alltogether()
 
 
-    # p = ParticipantFeatureVectors(4, from_file=True)
-    # p.createYVector()
-    # ser = pd.Series(p.Y)
 
-    # p.randomSplitSetForTraining(seed=111)
-    # p.saveSplitedSetToCSV(seed=111)
+    # p.saveFeatureVectorToCSV()
+    # pass
+    # y = pd.read_csv('feature_vectors/huge/YV_familiarity.csv', index_col=0).astype(int)
+    # print(y)
+    # y.replace({1: 0, 2: 0, 3: 1, 4: 1, 5: 1}, inplace=True)
+    # print(y)
+    # y.to_csv('feature_vectors/huge/YV_familiarity_binary.csv')
+
+
+
+
+
+
 
 
     # starttime = datetime.today()

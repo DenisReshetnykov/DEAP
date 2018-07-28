@@ -3,14 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from participant_data import ParticipantData
-from deapdata import EEG_CHANELS, PHYS_DATA_CHANELS, FREQ
-
-BANDS = {'theta': (4, 8), 'slow_alpha': (8, 10), 'alpha': (8, 12), 'beta': (12, 30), 'gamma': (30, FREQ)}
-ASYM_BANDS = {'theta': (4, 8), 'alpha': (8, 12), 'beta': (12, 30), 'gamma': (30, FREQ)}
-ASYM_ELECTRODE_PAIRS = [(1, 17), (2, 18), (3, 20), (4, 21), (5, 22), (6, 23), (7, 25),
-                        (8, 26), (9, 27), (10, 28), (11, 29), (12, 30), (13, 31), (14, 32)]
-
-
+from deapdata import EEG_CHANELS, PHYS_DATA_CHANELS, FREQ, BANDS, ASYM_BANDS, ASYM_ELECTRODE_PAIRS
 
 class ParticipantSignalsFeatures(ParticipantData):
     def __init__(self, nParticipant, __filename=None):
@@ -28,7 +21,7 @@ class ParticipantSignalsFeatures(ParticipantData):
             for electrodePair in electrodePairs:
                 self.getSpectralPowerAsymmetry(trial, electrodePair, asymBands)
 
-    def computeSpectralPower(self, trial, electrode, bands, signalFreq=FREQ, epochStart=0, epochStop=8063):
+    def computeSpectralPower(self, trial, electrode, bands, signalFreq=FREQ, epochStart=0, epochStop=None):
         '''
         :param trial: integer, number of video data in dataset (starting from 1)
         :param electrode: integer, number of channel in dataset (starting from 1)
@@ -40,6 +33,8 @@ class ParticipantSignalsFeatures(ParticipantData):
                       half of sampling frequency. ex.: {'slow_alpha': (8, 10), 'alpha': (8, 12)}
         :return: Power: dict, where key is band name and value is power. ex.:{'slow_alpha': 10, 'alpha': 20}
         '''
+        if epochStop is None:
+            epochStop = self.data.shape[2]
         signal = self.data[trial-1, electrode-1][epochStart:epochStop]
         fftSignal = abs(np.fft.fft(signal))
         Power = {}
@@ -95,13 +90,71 @@ class ParticipantSignalsFeatures(ParticipantData):
             # print(signal)
         return averageOfDerivative
 
+class ClearedEEGParticipantFeatures(ParticipantSignalsFeatures):
+    def __init__(self, nParticipant, __filename=None):
+        super().__init__(nParticipant, __filename)
+        self.data = self.data[:, :32, :]
+
+    def outliersToMean(self, data, sigma=2):
+        mean = np.mean(data)
+        std = np.std(data)
+        data = np.array([x_i if (mean - sigma * std < x_i) and (x_i < mean + sigma * std) else mean for x_i in data])
+        return data
+
+    def clearOutliers(self):
+        for trial in range(40):
+            for chanel in range(32):
+                self.data[trial, chanel] = self.outliersToMean(self.data[trial, chanel])
+
+    def computeEEGSpectralPower(self, timesize=4):
+        self.removeBaseline()
+        self.clearOutliers()
+        parts = int(self.data.shape[2]/FREQ/timesize)
+        for trial in range(1, self.data.shape[0]+1):
+            self.spectralEEGFeatures[trial] = {}
+            for chanel in range(1, self.data.shape[1]+1):
+                self.spectralEEGFeatures[trial][chanel] = {}
+                for timeSegment in range(parts):
+                    self.spectralEEGFeatures[trial][chanel][(timeSegment + 1) * timesize] = self.computeSpectralPower(
+                        trial, chanel, ASYM_BANDS, FREQ, FREQ * timeSegment, FREQ * (timeSegment + 1))
+        return self.spectralEEGFeatures
 
 
+def substractBaseline(data, baseline):
+    return data-np.mean(baseline)
+
+def replaceOutliersByMedian(data, sigma=2):
+    mean = np.mean(data)
+    std = np.std(data)
+    print("mean is {} ane std is {}".format(round(mean, 2), round(std, 2)))
+    data = np.array([x_i if (mean - sigma*std < x_i) and (x_i < mean + sigma*std) else mean for x_i in data])
+    return data
+
+def plotEEG(signals):
+    for n in range(4):
+        plt.figure(n)
+        fig, axes = plt.subplots(8, 1, figsize=(15, 15))
+        ax = axes.ravel()
+        for i in range(8):
+            ax[i].plot(signals[n*8+i])
+        # ax[0].set_xlabel("Значение признака")
+        # ax[0].set_ylabel("Частота")
+        # ax[0].legend(["0", "1"], loc="best")
+        fig.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
-    p = ParticipantSignalsFeatures(3)
-    p.calculateAverageOfDerivative(3)
+    p = ClearedEEGParticipantFeatures(4)
+    print(p.computeEEGSpectralPower())
+
+
+
+
+    # plotEEG(p.data[0])
+    # print(np.mean(p.data[3][6][0:384]))
+    # print(substractBaseline(p.data[3][6], p.data[3][6][0:384]))
+
     # p.computeFeatures(range(1, 41), range(1, 33), BANDS, FREQ, 0, 8063, ASYM_ELECTRODE_PAIRS, ASYM_BANDS)
     # for trial in range(1, 41):
     #     p.calculateAverageSkinResistance(trial)

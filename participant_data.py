@@ -38,8 +38,15 @@ class ParticipantData:
             print('No Familiarity data for participant {}'.format(self.nParticipant))
             return None
 
+    def removeBaseline(self, baseline_in_sec=3):
+        self.data = self.data[:, :, baseline_in_sec*128:]
+
+
 
 if __name__ == "__main__":
-    for n in range(1,33):
-        p = ParticipantData(n).getFamiliarity()
+    p = ParticipantData(1)
+    p.removeBaseline()
+
+    print(p.data[:, :32, :].shape)
+
     # print(p.data[1, 3].shape)
