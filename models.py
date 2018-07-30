@@ -2,6 +2,7 @@ from features import ParticipantFeatureVectors, createHugeFeatureVector, saveHug
 from metrics import calculateAccuracy
 from plotting import plotHistForPCA, plotPCA
 
+import datetime as dt
 import itertools
 from inspect import signature
 import numpy as np
@@ -28,9 +29,12 @@ from sklearn.metrics import confusion_matrix
 CONST_C = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000]
 CONST_gamma = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100]
 CONST_alpha = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]
+CONST_all = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000]
 CONST_mLP1 = [[n] for n in range(10, 100, 10)]
 CONST_mLP2 = [[n, m] for n in range(10, 100, 10) for m in range(10, 100, 10)]
 CONST_mLP3 = [[n, m, l] for n in range(10, 100, 10) for m in range(10, 100, 10) for l in range(10, 100, 10)]
+CONST_mLP4 = [[n, m, l, k] for n in range(10, 31, 10) for m in range(10, 31, 10) for l in range(10, 31, 10) for k in range(10, 31, 10)]
+CONST_mLP5 = [[n, m, l, k, j] for n in range(10, 71, 10) for m in range(10, 61, 10) for l in range(10, 51, 10) for k in range(10, 41, 10) for j in range(10, 31, 10)]
 
 def classBalanceInfo(y):
     # some python magic with dict comperhension to compute class balance. {class: (points, portion)}
@@ -244,8 +248,20 @@ def useModelWithParams(modelFunction, X, y, scaling, params):
     example: useModelWithParams(supportVectorClassifier, X, y, (CONST_C, CONST_gamma))
     '''
     returnByParam = {}
-    for combination in itertools.product(*params):
+    comb_len = len(list(itertools.product(*params)))
+    print("There {} different combinations of parameters".format(comb_len))
+    timestart = dt.datetime.now().timestamp()
+    timeprevious = dt.datetime.now().timestamp()
+    for counter, combination in enumerate(itertools.product(*params), 1):
         returnByParam[combination] = useModel(modelFunction, X, y, scaling, False, *combination)
+        if counter in [round(n*comb_len/100) for n in list(range(10, 100, 10))]:
+            best_key = max(returnByParam.keys(), key=(lambda key: returnByParam[key]))
+            timenow = dt.datetime.now().timestamp()
+            print("{} combination executed, {}s have passed (100% ETA ~ {}s)\n Current best result is {}"
+                  .format(counter,
+                          round(timenow-timestart),
+                          round((timenow-timestart)*comb_len/counter-(timenow-timestart)),
+                          (best_key, returnByParam[best_key])))
     best_key = max(returnByParam.keys(), key=(lambda key: returnByParam[key]))
     print('key {} value {}'.format(best_key, returnByParam[best_key]))
     return returnByParam
@@ -259,35 +275,47 @@ if __name__ == "__main__":
     MOD_BAL = [(logisticRegression, 30), (linearSVC, 300), (kNeighborsClassification, 210), (naiveBayesClassification,),
               (decisionTreeClassification, 19), (ensembleRandomForestClassifier, 1, 23),
               (gradientBoostingClassifier, 1, 3, 11), (supportVectorClassifier, 3, 30), (mLPClassifier, [50], 0.3),
-              (mLPClassifier, [50, 40], 0.01), (mLPClassifier, [50, 40, 10], 0.01), (adaBoostClassifier, 10, 0.01)]
+              (mLPClassifier, [50, 40], 0.01), (mLPClassifier, [10, 50, 50], 0.01), (adaBoostClassifier, 2, 3)]
 
-    X = Features(pd.read_csv('feature_vectors/huge/FV_familiarity.csv', index_col=0)).dataframe.iloc[:, :-1]
+    MOD_BAL_T = [(logisticRegression, 300), (linearSVC, 300), (kNeighborsClassification, 151),
+                 (naiveBayesClassification,), (decisionTreeClassification, 5), (ensembleRandomForestClassifier, 2, 9),
+                 (gradientBoostingClassifier, 1, 10, 2), (supportVectorClassifier, 8500, 0.001),
+                 (mLPClassifier, [10], 1), (mLPClassifier, [40, 80], 0.01), (mLPClassifier, [10, 10, 30], 0.3),
+                 (mLPClassifier, [20, 10, 10, 20], 0.3), (mLPClassifier, [20, 20, 10, 10, 20], 0.01),
+                 (adaBoostClassifier, 2, 3)]
+    # X = Features(pd.read_csv('feature_vectors/huge/FV_familiarity.csv', index_col=0)).dataframe.iloc[:, :-1]
     # y = np.array(pd.read_csv('feature_vectors/huge/YV_familiarity.csv', index_col=0).astype(int)).ravel()
 
-    # X = Features(pd.read_csv('feature_vectors/4/FV_all_f.csv', index_col=0)).dataframe
+    X = Features(pd.read_csv('feature_vectors/4/FV_all_f.csv', index_col=0)).dataframe
     y = np.array(pd.read_csv('feature_vectors/huge/YV_familiarity_binary.csv', index_col=0)).ravel()
+
     X_bal, y_bal = classBalancing(X, y)
 
     # print('LinearRegression model score: {}'.format(useLinearRegressionModel(X, y)))
     # print('RidgeRegression model score: {}'.format(useRidgeRegressionModel(X, y)))
     # print('LassoRegression model score: {}'.format(useLassoRegressionModel(X, y)))
-    # print(useModelWithParams(MODELS[9][0], X, y, 'MinMax', (range(1,100,10), CONST_alpha)))
-    # print(useModelWithParams(MOD_BAL[6][0], X_bal, y_bal, 'MinMax', (range(1, 6), CONST_alpha, range(1, 101, 10))))
-    # print(useModelWithParams(MOD_BAL[7][0], X_bal, y_bal, 'MinMax', (CONST_C, CONST_gamma)))
+    # print(useModelWithParams(MODELS[11][0], X, y, 'MinMax', (range(1,100,10), CONST_gamma)))
+    # print(useModelWithParams(MOD_BAL[2][0], X_bal, y_bal, 'MinMax', (CONST_all,) ))
+    # print(useModelWithParams(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', (CONST_mLP1, CONST_all, )))
+
+    # a = dt.datetime.now().timestamp()
+    # b = dt.datetime.now().timestamp()
+    # print(a-b)
+
     max = 0
-    for trt in CONST_mLP2:
-        for alpha in CONST_alpha:
+    for trt in CONST_mLP5:
+        for alpha in CONST_alpha[:5]:
             if useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha) > max:
                 max = useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha)
                 print('{} with alpha = {} :'.format(trt, alpha))
                 print(useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha))
+        if trt[1] == 60 and trt[2] == 50 and trt[3] == 40 and trt[3] == 30:
+            print(dt.datetime.now())
+            print(dt.datetime.now().timestamp())
+            print("{} is ended".format(trt[0]))
 
     #     print(useModelWithParams(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', ([10, 20], CONST_alpha)))
     # print(CONST_mLP3)
-
-    # model_result
-    # for n in range(10):
-
 
     # print('adaBoostClassifier model with scaling accuracy: {}'.format(useModel(MODELS[9][0], X, y, 'MinMax', False, *MODELS[9][1:])))
 
@@ -301,6 +329,14 @@ if __name__ == "__main__":
 
     # print('\nMinMax scaling:')
     # for model in MOD_BAL:
+    #     print('{} model with parameters {} score: {}'.format(model[0].__name__,
+    #                                                          ['{}={}'.format(name, value) for (name, value) in
+    #                                                           zip(list(signature(model[0]).parameters.keys())[4:],
+    #                                                               model[1:])],
+    #                                                          useModel(model[0], X_bal, y_bal, 'MinMax', False, *model[1:])))
+
+    # print('\nMinMax scaling:')
+    # for model in MOD_BAL_T:
     #     print('{} model with parameters {} score: {}'.format(model[0].__name__,
     #                                                          ['{}={}'.format(name, value) for (name, value) in
     #                                                           zip(list(signature(model[0]).parameters.keys())[4:],
