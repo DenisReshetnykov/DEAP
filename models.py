@@ -34,7 +34,8 @@ CONST_mLP1 = [[n] for n in range(10, 100, 10)]
 CONST_mLP2 = [[n, m] for n in range(10, 100, 10) for m in range(10, 100, 10)]
 CONST_mLP3 = [[n, m, l] for n in range(10, 100, 10) for m in range(10, 100, 10) for l in range(10, 100, 10)]
 CONST_mLP4 = [[n, m, l, k] for n in range(10, 31, 10) for m in range(10, 31, 10) for l in range(10, 31, 10) for k in range(10, 31, 10)]
-CONST_mLP5 = [[n, m, l, k, j] for n in range(10, 71, 10) for m in range(10, 61, 10) for l in range(10, 51, 10) for k in range(10, 41, 10) for j in range(10, 31, 10)]
+CONST_mLP5 = [[n, m, l, k, j] for n in range(20, 31, 10) for m in range(10, 41, 10) for l in range(10, 51, 10) for k in range(10, 41, 10) for j in range(10, 31, 10)]
+CONST_mLP7 = [[n, m, l, k, j, o, l] for n in range(10, 51, 10) for m in range(10, 51, 10) for l in range(10, 51, 10) for k in range(10, 51, 10) for j in range(10, 51, 10) for o in range(10, 51, 10) for l in range(10, 51, 10)]
 
 def classBalanceInfo(y):
     # some python magic with dict comperhension to compute class balance. {class: (points, portion)}
@@ -282,7 +283,7 @@ if __name__ == "__main__":
                  (gradientBoostingClassifier, 1, 10, 2), (supportVectorClassifier, 8500, 0.001),
                  (mLPClassifier, [10], 1), (mLPClassifier, [40, 80], 0.01), (mLPClassifier, [10, 10, 30], 0.3),
                  (mLPClassifier, [20, 10, 10, 20], 0.3), (mLPClassifier, [20, 20, 10, 10, 20], 0.01),
-                 (adaBoostClassifier, 2, 3)]
+                 (mLPClassifier, [10, 10, 30, 10, 50, 30, 30], 0.03), (adaBoostClassifier, 2, 3)]
     # X = Features(pd.read_csv('feature_vectors/huge/FV_familiarity.csv', index_col=0)).dataframe.iloc[:, :-1]
     # y = np.array(pd.read_csv('feature_vectors/huge/YV_familiarity.csv', index_col=0).astype(int)).ravel()
 
@@ -290,29 +291,30 @@ if __name__ == "__main__":
     y = np.array(pd.read_csv('feature_vectors/huge/YV_familiarity_binary.csv', index_col=0)).ravel()
 
     X_bal, y_bal = classBalancing(X, y)
+    print(X_bal.shape)
 
     # print('LinearRegression model score: {}'.format(useLinearRegressionModel(X, y)))
     # print('RidgeRegression model score: {}'.format(useRidgeRegressionModel(X, y)))
     # print('LassoRegression model score: {}'.format(useLassoRegressionModel(X, y)))
     # print(useModelWithParams(MODELS[11][0], X, y, 'MinMax', (range(1,100,10), CONST_gamma)))
     # print(useModelWithParams(MOD_BAL[2][0], X_bal, y_bal, 'MinMax', (CONST_all,) ))
-    # print(useModelWithParams(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', (CONST_mLP1, CONST_all, )))
+    # print(useModelWithParams(MOD_BAL[11][0], X_bal, y_bal, 'MinMax', (range(10, 200, 10), CONST_all, )))
 
     # a = dt.datetime.now().timestamp()
     # b = dt.datetime.now().timestamp()
     # print(a-b)
 
-    max = 0
-    for trt in CONST_mLP5:
-        for alpha in CONST_alpha[:5]:
-            if useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha) > max:
-                max = useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha)
-                print('{} with alpha = {} :'.format(trt, alpha))
-                print(useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha))
-        if trt[1] == 60 and trt[2] == 50 and trt[3] == 40 and trt[3] == 30:
-            print(dt.datetime.now())
-            print(dt.datetime.now().timestamp())
-            print("{} is ended".format(trt[0]))
+    # max = 0
+    # for trt in CONST_mLP7:
+    #     for alpha in CONST_alpha[:5]:
+    #         if useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha) > max:
+    #             max = useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha)
+    #             print('{} with alpha = {} :'.format(trt, alpha))
+    #             print(useModel(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', False, trt, alpha))
+    #     if trt[1] == 30 and trt[2] == 30 and trt[3] == 30 and trt[4] == 30 and trt[5] == 30 and trt[6] == 30:
+    #         print(dt.datetime.now())
+    #         print(dt.datetime.now().timestamp())
+    #         print("{} is ended".format(trt[0]))
 
     #     print(useModelWithParams(MOD_BAL[8][0], X_bal, y_bal, 'MinMax', ([10, 20], CONST_alpha)))
     # print(CONST_mLP3)

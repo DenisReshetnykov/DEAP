@@ -4,6 +4,7 @@
 /feature_vectors
 /metadata_csv
 /training_data
+/genetic
 functional_scheme.txt
 tree.dot
 tree.pdf
