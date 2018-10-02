@@ -295,7 +295,7 @@ class bestFeatures(unittest.TestCase):
 
 
         optimalFitness = ModelFitness(genes, 1)
-        best = gn.get_best(fnGetFitness, len(genes), optimalFitness, geneset, fnDisplay, custom_mutate=None, maxAge=10)
+        best = gn.get_best(fnGetFitness, len(genes), optimalFitness, geneset, fnDisplay, custom_mutate=None, maxAge=100)
         self.assertTrue(not optimalFitness > best.ModelFitness)
 
 
