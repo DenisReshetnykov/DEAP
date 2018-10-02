@@ -280,7 +280,7 @@ def gnFitness(model, X, y, *args):
     return useModel(model, X, y, scaling='MinMax', selection=False, *args)
 
 
-class bestFeatures(unittest.TestCase):
+class BestFeatures(unittest.TestCase):
     def find_features(self, genes, X, y):
         geneset = [0, 1]
         startTime = dt.datetime.now()
@@ -291,11 +291,8 @@ class bestFeatures(unittest.TestCase):
         def fnGetFitness(genes):
             return get_fitness(genes, linearSVC, X, y, (CONST_C[genes[0]*4+genes[1]*2+genes[2]*1], ))
 
-        # def fnMutate(genes):
-
-
         optimalFitness = ModelFitness(genes, 1)
-        best = gn.get_best(fnGetFitness, len(genes), optimalFitness, geneset, fnDisplay, custom_mutate=None, maxAge=10)
+        best = gn.get_best(fnGetFitness, len(genes), optimalFitness, geneset, fnDisplay, custom_mutate=None, maxAge=100)
         self.assertTrue(not optimalFitness > best.ModelFitness)
 
 
@@ -324,16 +321,15 @@ def get_fitness(genes, model, X, y, *args):
 
 def display(candidate, startTime):
     timeDiff = dt.datetime.now() - startTime
-    print("{0}\t=> {1}\t{2}".format(
-        ', '.join(map(str, candidate.Genes)),
-        candidate.Fitness,
-        str(timeDiff)))
-
-# def saveGeneticResult():
+    msg = "{2}\t{1}\t<=  {0}".format(''.join(map(str, candidate.Genes)), candidate.Fitness, str(timeDiff))
+    print(msg)
+    logfile = open('logs/logfile.txt', 'a+')
+    logfile.write(msg)
+    logfile.close()
 
 
 class Accuracy(ModelFitness):
-    def get_overal_acuracy(self, X_, y_bal, t_range):
+    def get_overal_acuracy(self, X, y_bal, t_range):
         best_accuracy = 0
         key_best = 0
         n_best = 0
@@ -349,7 +345,6 @@ class Accuracy(ModelFitness):
                                                                                                 best_accuracy))
         print('The best combination is n = {}, C = {}, accuracy = {}'.format(n_best, key_best, best_accuracy))
         return self, (n, n_best, key_best, best_accuracy)
-
 
 
 if __name__ == "__main__":
@@ -378,7 +373,7 @@ if __name__ == "__main__":
 
     X_bal, y_bal = classBalancing(X, y)
     genes = [1, 1, 1]+[rnd.randint(0, 1) for i in range(X_bal.shape[1])]
-    answer = bestFeatures()
+    answer = BestFeatures()
     answer.find_features(genes, X_bal, y_bal)
 
     # best_accuracy = 0

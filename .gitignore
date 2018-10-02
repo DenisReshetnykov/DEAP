@@ -5,6 +5,7 @@
 /metadata_csv
 /training_data
 /genetics
+/logs
 functional_scheme.txt
 tree.dot
 tree.pdf
