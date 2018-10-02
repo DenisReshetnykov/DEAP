@@ -1,6 +1,7 @@
 from features import ParticipantFeatureVectors, createHugeFeatureVector, saveHugeFeatureVector, Features
 from metrics import calculateAccuracy
 from plotting import plotHistForPCA, plotPCA
+import genetic as gn
 
 import datetime as dt
 import itertools
@@ -10,6 +11,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 import pydotplus
+import random as rnd
+import unittest
 
 from sklearn.decomposition import PCA, NMF
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
@@ -26,7 +29,7 @@ from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
 from sklearn.metrics import confusion_matrix
 
-CONST_C = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000]
+CONST_C = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000]
 CONST_gamma = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100]
 CONST_alpha = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]
 CONST_all = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000]
@@ -171,40 +174,42 @@ def adaBoostClassifier(X_train, Y_train, X_test, Y_test, n_estimators, learning_
     predicted = model.predict(X_test)
     return predicted
 
-def principalComponent(X):
-    pca = PCA(n_components=2)
+def principalComponent(X, n_components, isPrint=False, isShow=False):
+    pca = PCA(n_components=n_components)
     pca.fit(X)
     X_pca = pca.transform(X)
-    print("Форма исходного массива: {}".format(str(X.shape)))
-    print("Форма массива после сокращения размерности: {}".format(str(X_pca.shape)))
-    print("форма главных компонент: {}".format(pca.components_.shape))
-    print("компоненты PCA:\n{}".format(pca.components_))
-    plt.matshow(pca.components_, cmap='viridis')
-    plt.yticks([0, 1], ["Первая компонента", "Вторая компонента"])
-    plt.colorbar()
-    plt.xticks(range(len(X.columns)),
-               X.columns, rotation=85, ha='left')
-    plt.xlabel("Характеристика")
-    plt.ylabel("Главные компоненты")
-    plt.show()
+    if isPrint:
+        print("Форма исходного массива: {}".format(str(X.shape)))
+        print("Форма массива после сокращения размерности: {}".format(str(X_pca.shape)))
+        print("форма главных компонент: {}".format(pca.components_.shape))
+        print("компоненты PCA:\n{}".format(pca.components_))
+    if isShow:
+        plt.matshow(pca.components_, cmap='viridis')
+        plt.yticks([0, 1], ["Первая компонента", "Вторая компонента"])
+        plt.colorbar()
+        plt.xticks(range(len(X.columns)),
+                   X.columns, rotation=85, ha='left')
+        plt.xlabel("Характеристика")
+        plt.ylabel("Главные компоненты")
+        plt.show()
     return X_pca
 
-def negativeMatrixFactorization(X):
-    nmf = NMF(n_components=2, random_state=0)
+def negativeMatrixFactorization(X, n_components):
+    nmf = NMF(n_components=n_components, random_state=0)
     nmf.fit(X)
     X_nmf = nmf.transform(X)
-    print("Форма исходного массива: {}".format(str(X.shape)))
-    print("Форма массива после сокращения размерности: {}".format(str(X_nmf.shape)))
-    print("форма гNMF компонент: {}".format(nmf.components_.shape))
-    print("компоненты NMF:\n{}".format(nmf.components_))
-    plt.matshow(nmf.components_, cmap='viridis')
-    plt.yticks([0, 1], ["Первая компонента", "Вторая компонента"])
-    plt.colorbar()
-    # plt.xticks(range(len(X.columns)),
-    #            X.columns, rotation=85, ha='left')
-    plt.xlabel("Характеристика")
-    plt.ylabel("Главные компоненты")
-    plt.show()
+    # print("Форма исходного массива: {}".format(str(X.shape)))
+    # print("Форма массива после сокращения размерности: {}".format(str(X_nmf.shape)))
+    # print("форма гNMF компонент: {}".format(nmf.components_.shape))
+    # print("компоненты NMF:\n{}".format(nmf.components_))
+    # plt.matshow(nmf.components_, cmap='viridis')
+    # plt.yticks([0, 1], ["Первая компонента", "Вторая компонента"])
+    # plt.colorbar()
+    # # plt.xticks(range(len(X.columns)),
+    # #            X.columns, rotation=85, ha='left')
+    # plt.xlabel("Характеристика")
+    # plt.ylabel("Главные компоненты")
+    # plt.show()
     return X_nmf
 
 def selectFeatures(X_train, Y_train, X_test, percentile):
@@ -237,7 +242,7 @@ def useModel(modelFunction, X, y, scaling=False, selection=False, *args):
     accuracy = np.mean(predicted == Y_test)
     return accuracy
 
-def useModelWithParams(modelFunction, X, y, scaling, params):
+def useModelWithParams(modelFunction, X, y, scaling, isPrint=False, *params):
     '''
     combine all possible parameters, put each combination to the modelFunction and save result
     :param modelFunction: function for data model
@@ -250,7 +255,8 @@ def useModelWithParams(modelFunction, X, y, scaling, params):
     '''
     returnByParam = {}
     comb_len = len(list(itertools.product(*params)))
-    print("There {} different combinations of parameters".format(comb_len))
+    if isPrint:
+        print("There {} different combinations of parameters".format(comb_len))
     timestart = dt.datetime.now().timestamp()
     timeprevious = dt.datetime.now().timestamp()
     for counter, combination in enumerate(itertools.product(*params), 1):
@@ -258,14 +264,93 @@ def useModelWithParams(modelFunction, X, y, scaling, params):
         if counter in [round(n*comb_len/100) for n in list(range(10, 100, 10))]:
             best_key = max(returnByParam.keys(), key=(lambda key: returnByParam[key]))
             timenow = dt.datetime.now().timestamp()
-            print("{} combination executed, {}s have passed (100% ETA ~ {}s)\n Current best result is {}"
-                  .format(counter,
-                          round(timenow-timestart),
-                          round((timenow-timestart)*comb_len/counter-(timenow-timestart)),
-                          (best_key, returnByParam[best_key])))
+            if isPrint:
+                print("{} combination executed, {}s have passed (100% ETA ~ {}s)\n Current best result is {}"
+                      .format(counter,
+                              round(timenow-timestart),
+                              round((timenow-timestart)*comb_len/counter-(timenow-timestart)),
+                              (best_key, returnByParam[best_key])))
     best_key = max(returnByParam.keys(), key=(lambda key: returnByParam[key]))
-    print('key {} value {}'.format(best_key, returnByParam[best_key]))
-    return returnByParam
+    if isPrint:
+        print('key {} value {}'.format(best_key, returnByParam[best_key]))
+    return returnByParam, best_key
+
+
+def gnFitness(model, X, y, *args):
+    return useModel(model, X, y, scaling='MinMax', selection=False, *args)
+
+
+class bestFeatures(unittest.TestCase):
+    def find_features(self, genes, X, y):
+        geneset = [0, 1]
+        startTime = dt.datetime.now()
+
+        def fnDisplay(candidate):
+            display(candidate, startTime)
+
+        def fnGetFitness(genes):
+            return get_fitness(genes, linearSVC, X, y, (CONST_C[genes[0]*4+genes[1]*2+genes[2]*1], ))
+
+        # def fnMutate(genes):
+
+
+        optimalFitness = ModelFitness(genes, 1)
+        best = gn.get_best(fnGetFitness, len(genes), optimalFitness, geneset, fnDisplay, custom_mutate=None, maxAge=10)
+        self.assertTrue(not optimalFitness > best.ModelFitness)
+
+
+class ModelFitness:
+    def __init__(self, featuresCount, accuracy):
+        self.featuresCount = featuresCount
+        self.accuracy = accuracy
+
+    def __gt__(self, other):
+        if self.accuracy != other.accuracy:
+            return self.accuracy > other.accuracy
+        return self.featuresCount < other.featuresCount
+
+    def __str__(self):
+        return "{0} Accuracy with {1} Features".format(self.accuracy, self.featuresCount)
+
+
+def get_fitness(genes, model, X, y, *args):
+    featuresCount = 0
+    args = (CONST_C[genes[0]*4+genes[1]*2+genes[2]*1], )
+    featuresCount = sum([int(i) for i in genes[3:]])
+    X = X.loc[:, [X.columns[i] for i in range(len(genes[3:])) if genes[3:][i] == 1]]
+    accuracy = useModel(model, X, y, 'MinMax', False, *args)
+    return ModelFitness(featuresCount, accuracy)
+
+
+def display(candidate, startTime):
+    timeDiff = dt.datetime.now() - startTime
+    print("{0}\t=> {1}\t{2}".format(
+        ', '.join(map(str, candidate.Genes)),
+        candidate.Fitness,
+        str(timeDiff)))
+
+# def saveGeneticResult():
+
+
+class Accuracy(ModelFitness):
+    def get_overal_acuracy(self, X_, y_bal, t_range):
+        best_accuracy = 0
+        key_best = 0
+        n_best = 0
+        for n in range(1, t_range):
+            X_nmf = negativeMatrixFactorization(X_bal, _)
+            return_dict, best_key = useModelWithParams(MODELS[1][0], X_nmf, y_bal, 'MinMax', isPrint=False, *(CONST_C,))
+            if return_dict[best_key] > best_accuracy:
+                best_accuracy = return_dict[best_key]
+                key_best = best_key
+                n_best = n
+            if n % 50 == 0:
+                print('{} reached, current best result is n = {}, C = {}, accuracy = {}'.format(n, n_best, key_best,
+                                                                                                best_accuracy))
+        print('The best combination is n = {}, C = {}, accuracy = {}'.format(n_best, key_best, best_accuracy))
+        return self, (n, n_best, key_best, best_accuracy)
+
+
 
 if __name__ == "__main__":
     MODELS = [(logisticRegression, 1), (linearSVC, 1), (kNeighborsClassification, 5), (naiveBayesClassification,),
@@ -278,7 +363,7 @@ if __name__ == "__main__":
               (gradientBoostingClassifier, 1, 3, 11), (supportVectorClassifier, 3, 30), (mLPClassifier, [50], 0.3),
               (mLPClassifier, [50, 40], 0.01), (mLPClassifier, [10, 50, 50], 0.01), (adaBoostClassifier, 2, 3)]
 
-    MOD_BAL_T = [(logisticRegression, 300), (linearSVC, 300), (kNeighborsClassification, 151),
+    MOD_BAL_T = [(logisticRegression, 300), (linearSVC, 1000), (kNeighborsClassification, 151),
                  (naiveBayesClassification,), (decisionTreeClassification, 5), (ensembleRandomForestClassifier, 2, 9),
                  (gradientBoostingClassifier, 1, 10, 2), (supportVectorClassifier, 8500, 0.001),
                  (mLPClassifier, [10], 1), (mLPClassifier, [40, 80], 0.01), (mLPClassifier, [10, 10, 30], 0.3),
@@ -289,20 +374,31 @@ if __name__ == "__main__":
 
     X = Features(pd.read_csv('feature_vectors/4/FV_all_f.csv', index_col=0)).dataframe
     y = np.array(pd.read_csv('feature_vectors/huge/YV_familiarity_binary.csv', index_col=0)).ravel()
+    print(classBalanceInfo(y))
 
     X_bal, y_bal = classBalancing(X, y)
-    print(X_bal.shape)
+    genes = [1, 1, 1]+[rnd.randint(0, 1) for i in range(X_bal.shape[1])]
+    answer = bestFeatures()
+    answer.find_features(genes, X_bal, y_bal)
 
-    # print('LinearRegression model score: {}'.format(useLinearRegressionModel(X, y)))
-    # print('RidgeRegression model score: {}'.format(useRidgeRegressionModel(X, y)))
-    # print('LassoRegression model score: {}'.format(useLassoRegressionModel(X, y)))
+    # best_accuracy = 0
+    # key_best = 0
+    # n_best = 0
+    # for n in range(1, 1941):
+    #     X_pca = principalComponent(X_bal, n)
+    #     return_dict, best_key = useModelWithParams(MODELS[1][0], X_pca, y_bal, 'MinMax', False, *(CONST_C,))
+    #     if return_dict[best_key] > best_accuracy:
+    #         best_accuracy = return_dict[best_key]
+    #         key_best = best_key
+    #         n_best = n
+    #     if n % 50 == 0:
+    #         print('{} reached, current best result is n = {}, C = {}, accuracy = {}'.format(n, n_best, key_best,
+    #                                                                                         best_accuracy))
+    # print('The best combination is n = {}, C = {}, accuracy = {}'.format(n_best, key_best, best_accuracy))
+
     # print(useModelWithParams(MODELS[11][0], X, y, 'MinMax', (range(1,100,10), CONST_gamma)))
     # print(useModelWithParams(MOD_BAL[2][0], X_bal, y_bal, 'MinMax', (CONST_all,) ))
     # print(useModelWithParams(MOD_BAL[11][0], X_bal, y_bal, 'MinMax', (range(10, 200, 10), CONST_all, )))
-
-    # a = dt.datetime.now().timestamp()
-    # b = dt.datetime.now().timestamp()
-    # print(a-b)
 
     # max = 0
     # for trt in CONST_mLP7:
