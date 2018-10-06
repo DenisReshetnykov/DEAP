@@ -196,9 +196,5 @@ def plotPCA(X_pca, y):
     plt.ylabel("Вторая главная компонента")
     plt.show()
 
+
 if __name__ == "__main__":
-    plotScaterMatrix()
-
-
-    # basicalDataAnalysis(2)
-    # print(plotRatings(calculateRatingMinMaxMean(getExpIDData())))
