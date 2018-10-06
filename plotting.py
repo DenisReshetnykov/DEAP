@@ -1,3 +1,4 @@
+from datetime import timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -197,4 +198,35 @@ def plotPCA(X_pca, y):
     plt.show()
 
 
+def parseLogfileToDF():
+    with open("logs/logfile.txt", 'r') as logfile:
+        data = logfile.readlines()
+    print('log length = {}'.format(len(data)))
+    logArr = [[datafield.split('\t')[0], datafield.split('\t')[1].split(' ')[0], datafield.split('\t')[1].split(' ')[3]]
+              for datafield in data]
+    logDF = pd.DataFrame(logArr, columns=['TS', 'Acc', 'FC'])
+    return logDF
+
+
+def plotGeneticResults():
+    logDF = parseLogfileToDF()
+    x = list(map(timedelta.total_seconds, pd.to_timedelta(logDF['TS'])))
+    y1 = list(logDF['Acc'].astype('float'))
+    y2 = list(logDF['FC'].astype('int'))
+
+    fig, ax1 = plt.subplots(figsize=(15, 15))
+    ax1.plot(x, y1, 'b-')
+    ax1.set_xlabel('Время (с)')
+    ax1.set_ylabel('Точность', color='b')
+    ax1.tick_params('y', colors='b')
+
+    ax2 = ax1.twinx()
+    ax2.plot(x, y2, 'r-')
+    ax2.set_ylabel('Кол-тво признаков', color='r')
+    ax2.tick_params('y', colors='r')
+
+    plt.savefig('genetic.png')
+    plt.show()
+
 if __name__ == "__main__":
+    plotGeneticResults()
