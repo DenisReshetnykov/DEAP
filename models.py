@@ -30,6 +30,7 @@ from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 from sklearn.metrics import confusion_matrix
 
 CONST_C = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000]
+# CONST_C = [100, 100, 100, 100, 100, 100, 100, 100, 100, 300, 1000, 3000, 10000]
 CONST_gamma = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100]
 CONST_alpha = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]
 CONST_all = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000]
@@ -174,7 +175,7 @@ def adaBoostClassifier(X_train, Y_train, X_test, Y_test, n_estimators, learning_
     predicted = model.predict(X_test)
     return predicted
 
-def principalComponent(X, n_components, isPrint=False, isShow=False):
+def principalComponent(X, n_components, isPrint=False, isShow=False, n_show=None):
     pca = PCA(n_components=n_components)
     pca.fit(X)
     X_pca = pca.transform(X)
@@ -184,11 +185,13 @@ def principalComponent(X, n_components, isPrint=False, isShow=False):
         print("форма главных компонент: {}".format(pca.components_.shape))
         print("компоненты PCA:\n{}".format(pca.components_))
     if isShow:
-        plt.matshow(pca.components_, cmap='viridis')
-        plt.yticks([0, 1], ["Первая компонента", "Вторая компонента"])
+        if n_show is not None:
+            pca.components_ = pca.components_[0:n_show[0], 0:n_show[1]]
+        plt.matshow(pca.components_, cmap='seismic')
+        # plt.yticks([0, 1], ["Первая компонента", "Вторая компонента"])
         plt.colorbar()
-        plt.xticks(range(len(X.columns)),
-                   X.columns, rotation=85, ha='left')
+        # plt.xticks(range(len(X.columns)),
+        #            X.columns, rotation=85, ha='left')
         plt.xlabel("Характеристика")
         plt.ylabel("Главные компоненты")
         plt.show()
@@ -321,7 +324,7 @@ def get_fitness(genes, model, X, y, *args):
 
 def display(candidate, startTime):
     timeDiff = dt.datetime.now() - startTime
-    msg = "{2}\t{1}\t<=  {0}".format(''.join(map(str, candidate.Genes)), candidate.Fitness, str(timeDiff))
+    msg = "{2}\t{1}\t<=  {0}\n".format(''.join(map(str, candidate.Genes)), candidate.Fitness, str(timeDiff))
     print(msg)
     logfile = open('logs/logfile.txt', 'a+')
     logfile.write(msg)
@@ -334,7 +337,7 @@ class Accuracy(ModelFitness):
         key_best = 0
         n_best = 0
         for n in range(1, t_range):
-            X_nmf = negativeMatrixFactorization(X_bal, _)
+            X_nmf = negativeMatrixFactorization(X_bal, n)
             return_dict, best_key = useModelWithParams(MODELS[1][0], X_nmf, y_bal, 'MinMax', isPrint=False, *(CONST_C,))
             if return_dict[best_key] > best_accuracy:
                 best_accuracy = return_dict[best_key]
@@ -345,6 +348,34 @@ class Accuracy(ModelFitness):
                                                                                                 best_accuracy))
         print('The best combination is n = {}, C = {}, accuracy = {}'.format(n_best, key_best, best_accuracy))
         return self, (n, n_best, key_best, best_accuracy)
+
+def findBestPCA(X_bal, y_bal, startTime):
+    for n in range(1919, 1, -1):
+        X_pca = principalComponent(X_bal, n)
+        best_accuracy = 0
+        for C in CONST_C[1:9]:
+            accuracy = useModel(linearSVC, X_pca, y_bal, 'MinMax', False, C)
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+        timeDiff = dt.datetime.now() - startTime
+        msg = "{0}\t{1}\t{2} principal component used\n".format(str(timeDiff), str(best_accuracy), str(n))
+        print(msg)
+        logfile = open('logs/logfilePCA.txt', 'a+')
+        logfile.write(msg)
+
+def findBestNMF(X_bal, y_bal, startTime):
+    for n in range(1, 870):
+        X_nmf = negativeMatrixFactorization(X_bal, n)
+        best_accuracy = 0
+        for C in CONST_C[1:9]:
+            accuracy = useModel(linearSVC, X_nmf, y_bal, 'MinMax', False, C)
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+        timeDiff = dt.datetime.now() - startTime
+        msg = "{0}\t{1}\t{2} nmf matrix size\n".format(str(timeDiff), str(best_accuracy), str(n))
+        print(msg)
+        logfile = open('logs/logfileNMF.txt', 'a+')
+        logfile.write(msg)
 
 
 if __name__ == "__main__":
@@ -372,24 +403,18 @@ if __name__ == "__main__":
     print(classBalanceInfo(y))
 
     X_bal, y_bal = classBalancing(X, y)
-    genes = [1, 1, 1]+[rnd.randint(0, 1) for i in range(X_bal.shape[1])]
-    answer = BestFeatures()
-    answer.find_features(genes, X_bal, y_bal)
+    principalComponent(X_bal, 447, isPrint=True, isShow=True, n_show=(20, 60))
 
-    # best_accuracy = 0
-    # key_best = 0
-    # n_best = 0
-    # for n in range(1, 1941):
-    #     X_pca = principalComponent(X_bal, n)
-    #     return_dict, best_key = useModelWithParams(MODELS[1][0], X_pca, y_bal, 'MinMax', False, *(CONST_C,))
-    #     if return_dict[best_key] > best_accuracy:
-    #         best_accuracy = return_dict[best_key]
-    #         key_best = best_key
-    #         n_best = n
-    #     if n % 50 == 0:
-    #         print('{} reached, current best result is n = {}, C = {}, accuracy = {}'.format(n, n_best, key_best,
-    #                                                                                         best_accuracy))
-    # print('The best combination is n = {}, C = {}, accuracy = {}'.format(n_best, key_best, best_accuracy))
+    # Генетический алгоритм
+    # genes = [1, 1, 1]+[rnd.randint(0, 1) for i in range(X_bal.shape[1])]
+    # answer = BestFeatures()
+    # answer.find_features(genes, X_bal, y_bal)
+
+    # Поиск PCA и NMF
+    # findBestPCA(X_bal, y_bal, dt.datetime.now())
+    # findBestNMF(X_bal, y_bal, dt.datetime.now())
+
+
 
     # print(useModelWithParams(MODELS[11][0], X, y, 'MinMax', (range(1,100,10), CONST_gamma)))
     # print(useModelWithParams(MOD_BAL[2][0], X_bal, y_bal, 'MinMax', (CONST_all,) ))

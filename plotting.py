@@ -202,20 +202,40 @@ def parseLogfileToDF():
     with open("logs/logfile.txt", 'r') as logfile:
         data = logfile.readlines()
     print('log length = {}'.format(len(data)))
-    logArr = [[datafield.split('\t')[0], datafield.split('\t')[1].split(' ')[0], datafield.split('\t')[1].split(' ')[3]]
-              for datafield in data]
+    logArr = [[datafield.split('\t')[0], datafield.split('\t')[1].split(' ')[0], datafield.split('\t')[1].split(' ')[3],
+               datafield.split('\t')[2]] for datafield in data]
+    logDF = pd.DataFrame(logArr, columns=['TS', 'Acc', 'FC','FV'])
+    return logDF
+
+
+def parsePCALogfileToDF():
+    with open("logs/logfilePCA.txt", 'r') as logfile:
+        data = logfile.readlines()
+    print('log length = {}'.format(len(data)))
+    logArr = [[datafield.split('\t')[0], datafield.split('\t')[1], datafield.split('\t')[2].split(' ')[0]] for datafield
+              in data]
+    logDF = pd.DataFrame(logArr, columns=['TS', 'Acc', 'FC'])
+    return logDF
+
+def parseNMFLogfileToDF():
+    with open("logs/logfileNMF.txt", 'r') as logfile:
+        data = logfile.readlines()
+    print('log length = {}'.format(len(data)))
+    logArr = [[datafield.split('\t')[0], datafield.split('\t')[1], datafield.split('\t')[2].split(' ')[0]] for datafield
+              in data]
     logDF = pd.DataFrame(logArr, columns=['TS', 'Acc', 'FC'])
     return logDF
 
 
-def plotGeneticResults():
+def plotGeneticResults(filename):
     logDF = parseLogfileToDF()
     x = list(map(timedelta.total_seconds, pd.to_timedelta(logDF['TS'])))
     y1 = list(logDF['Acc'].astype('float'))
     y2 = list(logDF['FC'].astype('int'))
 
-    fig, ax1 = plt.subplots(figsize=(15, 15))
-    ax1.plot(x, y1, 'b-')
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    plt.tight_layout(rect=[0.02, 0.01, 0.97, 1])
+    ax1.plot(x, y1, 'b-', lw=.5)
     ax1.set_xlabel('Время (с)')
     ax1.set_ylabel('Точность', color='b')
     ax1.tick_params('y', colors='b')
@@ -225,8 +245,63 @@ def plotGeneticResults():
     ax2.set_ylabel('Кол-тво признаков', color='r')
     ax2.tick_params('y', colors='r')
 
-    plt.savefig('genetic.png')
+    plt.savefig(filename)
     plt.show()
 
-if __name__ == "__main__":
-    plotGeneticResults()
+def findAcc():
+    logDF = parseLogfileToDF()
+    print(logDF[logDF['Acc'] > '0.8'])
+
+def plotPCAResult(filename):
+    logDF = parsePCALogfileToDF()
+    x = list(map(timedelta.total_seconds, pd.to_timedelta(logDF['TS'])))
+    y1 = list(logDF['Acc'].astype('float'))
+    y2 = list(logDF['FC'].astype('int'))
+
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    plt.tight_layout(rect=[0.02, 0.01, 0.96, 1])
+    ax1.plot(x, y1, 'b-', lw=.5)
+    ax1.set_xlabel('Время (с)')
+    ax1.set_ylabel('Точность', color='b')
+    ax1.tick_params('y', colors='b')
+
+    ax2 = ax1.twinx()
+    ax2.plot(x, y2, 'r-')
+    ax2.set_ylabel('Кол-тво признаков', color='r')
+    ax2.tick_params('y', colors='r')
+    plt.ylim(top=1930)
+
+    plt.savefig(filename)
+    plt.show()
+
+def plotNMFResult(filename):
+    logDF = parseNMFLogfileToDF()
+    x = list(map(timedelta.total_seconds, pd.to_timedelta(logDF['TS'])))
+    y1 = list(logDF['Acc'].astype('float'))
+    y2 = list(logDF['FC'].astype('int'))
+
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    plt.tight_layout(rect=[0.02, 0.01, 0.97, 1])
+    ax1.plot(x, y1, 'b-', lw=.5)
+    ax1.set_xlabel('Время (с)')
+    ax1.set_ylabel('Точность', color='b')
+    ax1.tick_params('y', colors='b')
+
+    ax2 = ax1.twinx()
+    ax2.plot(x, y2, 'r-')
+    ax2.set_ylabel('Кол-тво признаков', color='r')
+    ax2.tick_params('y', colors='r')
+
+    plt.savefig(filename)
+    plt.show()
+
+
+# if __name__ == "__main__":
+    # plotGeneticResults('Genetic.jpg')
+    # # findAcc()
+    # df = parsePCALogfileToDF()
+    # df = parseNMFLogfileToDF()
+    # print(df[df['Acc'].astype('float') > 0.58])
+    # print(df[df['FC'].astype('float') == 223])
+    # plotPCAResult('PCA.jpg')
+    # plotNMFResult('NMF.jpg')
